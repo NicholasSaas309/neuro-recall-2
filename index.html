@@ -238,12 +238,6 @@
     display:flex;align-items:center;justify-content:center;
   }
   .video-frame video{width:100%;height:100%;object-fit:cover;}
-  .video-placeholder-hint{
-    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:10px;color:#5f7396;pointer-events:none;text-align:center;padding:0 20px;
-  }
-  .video-placeholder-hint svg{width:38px;height:38px;color:#3a5273;}
-  .video-placeholder-hint span{font-size:12px;font-weight:600;letter-spacing:.02em;color:#7c8fb0;}
   .mute-btn{
     position:absolute;right:12px;bottom:12px;width:38px;height:38px;border-radius:50%;
     background:rgba(8,13,23,.65);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.18);
@@ -266,16 +260,6 @@
   .video-meta .comment-top{margin-bottom:8px;}
   .video-meta .comment-stars{margin-bottom:6px;}
   .video-meta .comment-text{font-size:13px;}
-  .video-frame{cursor:pointer;transition:box-shadow .15s;}
-  .video-frame.drag-over{box-shadow:inset 0 0 0 3px var(--cyan-400);}
-  .video-frame.has-video .video-placeholder-hint{display:none;}
-  .video-publish-bar{text-align:center;margin-top:36px;}
-  .btn-download-page{
-    background:var(--navy-900);color:#fff;font-weight:800;font-size:13.5px;letter-spacing:.03em;
-    padding:15px 28px;border-radius:9px;border:none;cursor:pointer;transition:transform .15s,background .15s;
-  }
-  .btn-download-page:disabled{background:#c7cedb;color:#8291a8;cursor:not-allowed;}
-  .btn-download-page:not(:disabled):hover{transform:translateY(-1px);background:var(--navy-800);}
 
   /* ---------- CERT BADGES ---------- */
   .certs{background:linear-gradient(90deg,#0e5a76,#1478a0);padding:52px 24px;}
@@ -482,10 +466,6 @@
   </div>
 
   <div class="video-grid" id="videoGrid"></div>
-
-  <div class="video-publish-bar wrap">
-    <button class="btn-download-page" id="downloadPageBtn" disabled>Download Updated Page</button>
-  </div>
 </section>
 
 <!-- ================= CERT BADGES ================= -->
@@ -683,28 +663,20 @@
     commentsGrid.appendChild(card);
   });
 
-  // ---------- Video testimonials (placeholder) ----------
+  // ---------- Video testimonials ----------
   const videos = [
-    {n:'Sophia Reyes'},
-    {n:'Marcus Hail'},
-    {n:'Emily Novak'},
+    {n:'Sophia Reyes', src:'assets/testimonial-1.mp4'},
+    {n:'Marcus Hail', src:'assets/testimonial-2.mp4'},
+    {n:'Emily Novak', src:'assets/testimonial-3.mp4'},
   ];
   const videoGrid = document.getElementById('videoGrid');
-  const downloadPageBtn = document.getElementById('downloadPageBtn');
-  let loadedVideoCount = 0;
 
   videos.forEach((v,i)=>{
     const card = document.createElement('div');
     card.className = 'video-card';
     card.innerHTML = `
       <div class="video-frame" data-idx="${i}">
-        <!-- Replace the src below with the hosted video link, or drag a file here to preview -->
-        <video muted loop autoplay playsinline preload="metadata"></video>
-        <input type="file" accept="video/*" class="video-file-input" hidden>
-        <div class="video-placeholder-hint">
-          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M17 9.5l4-2.3v9.6l-4-2.3" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-          <span>Drag a video here<br>or click to choose a file</span>
-        </div>
+        <video muted loop autoplay playsinline preload="metadata" src="${v.src}"></video>
         <div class="live-tag"><span class="live-dot"></span>LOOP</div>
         <button class="mute-btn" aria-label="Unmute" data-idx="${i}">
           <svg class="icon-off" viewBox="0 0 24 24" fill="none"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor"/><path d="M17 8.5c1.2 1 1.9 2.2 1.9 3.5S18.2 14.5 17 15.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M19.5 6c2 1.6 3.2 3.7 3.2 6s-1.2 4.4-3.2 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M2 2l20 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -744,57 +716,6 @@
       }
     });
     vid.play().catch(()=>{});
-
-    // ---------- Drag-and-drop / click to load a local video, baked in as base64 ----------
-    const frame = card.querySelector('.video-frame');
-    const fileInput = card.querySelector('.video-file-input');
-
-    function loadLocalVideo(file){
-      if(!file || !file.type.startsWith('video/')) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        const alreadyLoaded = frame.classList.contains('has-video');
-        vid.src = reader.result; // data: URI — gets baked into the page on download
-        frame.classList.add('has-video');
-        vid.muted = true;
-        btn.classList.remove('is-unmuted');
-        btn.setAttribute('aria-label','Unmute');
-        vid.play().catch(()=>{});
-        if(!alreadyLoaded){
-          loadedVideoCount++;
-          downloadPageBtn.disabled = loadedVideoCount === 0;
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-
-    frame.addEventListener('click', (e)=>{
-      if(e.target.closest('.mute-btn')) return;
-      fileInput.click();
-    });
-    fileInput.addEventListener('change', ()=> loadLocalVideo(fileInput.files[0]));
-
-    ['dragenter','dragover'].forEach(evt=>{
-      frame.addEventListener(evt, (e)=>{
-        e.preventDefault();
-        e.stopPropagation();
-        frame.classList.add('drag-over');
-      });
-    });
-    ['dragleave','dragend'].forEach(evt=>{
-      frame.addEventListener(evt, (e)=>{
-        e.preventDefault();
-        e.stopPropagation();
-        frame.classList.remove('drag-over');
-      });
-    });
-    frame.addEventListener('drop', (e)=>{
-      e.preventDefault();
-      e.stopPropagation();
-      frame.classList.remove('drag-over');
-      const file = e.dataTransfer.files && e.dataTransfer.files[0];
-      loadLocalVideo(file);
-    });
   });
 
   // ---------- Reviews wall (Stamped-style, before FAQ) ----------
@@ -850,20 +771,6 @@
       </div>
     `;
     reviewsList.appendChild(row);
-  });
-
-  // ---------- Download a self-contained copy of the page with videos baked in ----------
-  downloadPageBtn.addEventListener('click', ()=>{
-    const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-    const blob = new Blob([html], {type:'text/html'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'index.html';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
   });
 </script>
 
